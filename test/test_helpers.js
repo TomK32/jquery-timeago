@@ -12,7 +12,9 @@ var iso8601 = function (date) {
 
 function prepareDynamicDates() {
   $('abbr.loaded').attr("title", iso8601(new Date()));
+  $('time.loaded').attr("datetime", iso8601(new Date()));
   $('abbr.modified').attr("title", iso8601(new Date(document.lastModified)));
+  $('time.modified').attr("datetime", iso8601(new Date(document.lastModified)));
 }
 
 function loadNumbers() {

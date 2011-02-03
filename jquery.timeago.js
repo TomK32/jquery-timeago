@@ -12,6 +12,7 @@
  * http://www.opensource.org/licenses/mit-license.php
  *
  * Copyright (c) 2008-2011, Ryan McGeary (ryanonjavascript -[at]- mcgeary [*dot*] org)
+ * Copyright (c) 2011, Thomas R. Koll (info@ananasblau.com)
  */
 (function($) {
   $.timeago = function(timestamp) {
@@ -45,21 +46,29 @@
         months: "%d months",
         year: "about a year",
         years: "%d years",
+        today: 'today',
+        tomorrow: 'tomorrow',
+        yesterday: 'yesterday',
+        last: 'last %d',
+        upcoming: 'upcoming %d',
+        weekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         numbers: []
       }
     },
-    inWords: function(distanceMillis) {
+    inWords: function(distanceMillis, format) {
+      if(!format) format = 'time';
       var $l = this.settings.strings;
       var prefix = $l.prefixAgo;
       var suffix = $l.suffixAgo;
+      future = false;
       if (this.settings.allowFuture) {
         if (distanceMillis < 0) {
+          future = true;
           prefix = $l.prefixFromNow;
           suffix = $l.suffixFromNow;
         }
         distanceMillis = Math.abs(distanceMillis);
       }
-
       var seconds = distanceMillis / 1000;
       var minutes = seconds / 60;
       var hours = minutes / 60;
@@ -72,13 +81,33 @@
         return string.replace(/%d/i, value);
       }
 
-      var words = seconds < 45 && substitute($l.seconds, Math.round(seconds)) ||
-        seconds < 90 && substitute($l.minute, 1) ||
-        minutes < 45 && substitute($l.minutes, Math.round(minutes)) ||
-        minutes < 90 && substitute($l.hour, 1) ||
-        hours < 24 && substitute($l.hours, Math.round(hours)) ||
-        hours < 48 && substitute($l.day, 1) ||
-        days < 30 && substitute($l.days, Math.floor(days)) ||
+      var words;
+
+      console.log(format);
+      if (format == 'date') { // date
+        weekday = null;
+        n_days = days - (new Date()).getHours()/24 + (future ? 1 : -1);
+        if(n_days >= 1 && days < 7) {
+          weekday = $l.weekdays[Math.floor((new Date()).getDay() + 6 + n_days * (future ? 1 : -1) ) % 7];
+          words = substitute((future ? $l.upcoming : $l.last), weekday);
+        }
+        words = words ||
+          n_days < 1 && days > 1 && !future && substitute($l.yesterday, words) ||
+          n_days < 1 && days > 1 && future && substitute($l.tomorrow, words) ||
+          n_days < 1 && substitute($l.today, 1) ||
+          days < 1 && future && substitute($l.tomorrow, words);
+        if(days < 8)
+          prefix = suffix = null;
+          console.log(words);
+      } else {
+        words = seconds < 45 && substitute($l.seconds, Math.round(seconds)) ||
+          seconds < 90 && substitute($l.minute, 1) ||
+          minutes < 45 && substitute($l.minutes, Math.round(minutes)) ||
+          minutes < 90 && substitute($l.hour, 1) ||
+          hours < 24 && substitute($l.hours, Math.round(hours)) ||
+          hours < 48 && substitute($l.day, 1);
+      }
+      words = words || days < 30 && substitute($l.days, Math.floor(days)) ||
         days < 60 && substitute($l.month, 1) ||
         days < 365 && substitute($l.months, Math.floor(days / 30)) ||
         years < 2 && substitute($l.year, 1) ||
@@ -116,7 +145,7 @@
   function refresh() {
     var data = prepareData(this);
     if (!isNaN(data.datetime)) {
-      $(this).text(inWords(data.datetime));
+      $(this).text(inWords(data.datetime, $(this).attr('data-format')));
     }
     return this;
   }
@@ -133,8 +162,8 @@
     return element.data("timeago");
   }
 
-  function inWords(date) {
-    return $t.inWords(distance(date));
+  function inWords(date, format) {
+    return $t.inWords(distance(date), format);
   }
 
   function distance(date) {
@@ -145,3 +174,4 @@
   document.createElement("abbr");
   document.createElement("time");
 }(jQuery));
+
